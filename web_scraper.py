@@ -170,3 +170,59 @@ class WebScraper:
 
         return driver
 
+    def run_scraper(self):
+        # Load input data
+        try:
+            input_data = pd.read_excel(self.input_file)
+            data = self.add_column_with_links(input_data)
+        except FileNotFoundError:
+            print(f'[{datetime.datetime.now()}] Error while loading input data: file {self.input_file} does not exist')
+            return
+        except KeyError:
+            print(f'[{datetime.datetime.now()}] Error while loading input data: could not find column "uri" in file {self.file_used_ids}')
+            return
+        except Exception as e:
+            print(f'[{datetime.datetime.now()}] Error while loading input data: {e}')
+            return
+
+        # Load previously scraped data
+        if self.file_used_ids:
+            try:
+                self.make_list_with_used_ids(self.file_used_ids)
+            except FileNotFoundError:
+                print(
+                    f'[{datetime.datetime.now()}] Error while loading used IDs: file {self.file_used_ids} does not exist')
+            except KeyError:
+                print(
+                    f'[{datetime.datetime.now()}] Error while loading used IDs: could not find column "id" in file {self.file_used_ids}')
+            except Exception as e:
+                print(f'[{datetime.datetime.now()}] Error while loading used IDs: {e}')
+
+        # Load proxies
+        if self.file_proxies:
+            try:
+                proxies = self.get_proxy_list(self.file_proxies)
+            except KeyError:
+                print(
+                    f'[{datetime.datetime.now()}] Error while loading proxies: file {self.file_proxies} does not exist')
+                proxies = []
+            except Exception as e:
+                print(f'[{datetime.datetime.now()}] Error while loading proxies: {e}')
+                proxies = []
+        else:
+            proxies = None
+
+        # Scrape data
+        scraped_data = self.scrape_details(data, proxies)
+
+        # Configuring current time to name the file
+        now = datetime.datetime.now()
+        dt_string = now.strftime("%d_%m_%Y_%H_%M")
+
+        # Exporting data
+        try:
+            used_ids_df = pd.DataFrame(self._used_ids, columns=['id'])
+            used_ids_df.to_excel(f'used_ids_{dt_string}.xlsx')
+            scraped_data.to_excel(f'scraped_data_{dt_string}.xlsx')
+        except Exception as e:
+            print(f'[{datetime.datetime.now()}] Error while scraping data: {e}')
