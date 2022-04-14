@@ -19,7 +19,18 @@ logging.basicConfig(filename='web_scraper.log',
 
 
 class WebScraper:
+    """
+    Web Scraper for portal with real estate listings.
+    """
+
     def __init__(self, file_input: str, file_used_ids: str = '', file_proxies: str = '') -> None:
+        """
+        Class constructor.
+        :param file_input: path to file (.xlsx) with input data
+        :param file_used_ids: path to file (.xlsx) with IDs of previously scraped data
+        :param file_proxies: path to file (.txt) with proxies to use
+        """
+
         self.input_file = file_input
         self.file_used_ids = file_used_ids
         self.file_proxies = file_proxies
@@ -28,6 +39,12 @@ class WebScraper:
 
     @staticmethod
     def add_column_with_links(input_data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Creates new column with URL of listing.
+        :param input_data: DataFrame with IDs and URLs of listings
+        :return: data with new column
+        """
+
         url_base = 'https://www.bezrealitky.cz/nemovitosti-byty-domy/'
 
         input_data['url'] = input_data['uri'].apply(lambda x: url_base + x)
@@ -35,10 +52,22 @@ class WebScraper:
         return input_data
 
     def make_list_with_used_ids(self, file_used_ids: str) -> None:
+        """
+        Loads IDs of previously scraped data and appends them to class attribute.
+        :param file_used_ids: path to file with IDs of previously scraped data
+        """
+
         df = pd.read_excel(file_used_ids)
         self._used_ids.extend(df['id'].tolist())
 
     def scrape_details(self, input_data: pd.DataFrame, proxies: list) -> (pd.DataFrame, list):
+        """
+        Scrapes details about listings, including property parameters and information about neighborhood.
+        :param input_data: DataFrame with IDs and URLs of listings
+        :param proxies: list of proxies to use
+        :return: DataFrame with scraped data or list in case of problems while creating DataFrame
+        """
+
         logging.info('Scraping started')
         print(f'[{datetime.datetime.now()}] Scraping started')
 
@@ -153,12 +182,24 @@ class WebScraper:
 
     @staticmethod
     def get_proxy_list(proxies_file: str) -> list:
+        """
+        Loads file with proxies.
+        :param proxies_file: path to file (.txt) with proxies. 1 proxy per line, proxy format - IP:PORT
+        :return: list of proxies
+        """
+
         proxies = pd.read_table(proxies_file, delim_whitespace=True, header=None)[0].values.tolist()
 
         return proxies
 
     @staticmethod
     def set_browser(proxy_input: str = None) -> webdriver:
+        """
+        Configures browser for scraping.
+        :param proxy_input: proxy to use
+        :return: browser instance
+        """
+
         capabilities = webdriver.DesiredCapabilities.CHROME
 
         # Set up proxy
@@ -183,6 +224,10 @@ class WebScraper:
         return driver
 
     def run_scraper(self) -> None:
+        """
+        Launches scraper.
+        """
+
         # Load input data
         try:
             input_data = pd.read_excel(self.input_file)
