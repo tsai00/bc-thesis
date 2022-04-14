@@ -19,7 +19,7 @@ logging.basicConfig(filename='web_scraper.log',
 
 
 class WebScraper:
-    def __init__(self, file_input, file_used_ids, file_proxies):
+    def __init__(self, file_input: str, file_used_ids: str = '', file_proxies: str = '') -> None:
         self.input_file = file_input
         self.file_used_ids = file_used_ids
         self.file_proxies = file_proxies
@@ -27,18 +27,18 @@ class WebScraper:
         self._used_ids = []     # List with IDs of previously scraped listings
 
     @staticmethod
-    def add_column_with_links(input_data):
+    def add_column_with_links(input_data: pd.DataFrame) -> pd.DataFrame:
         url_base = 'https://www.bezrealitky.cz/nemovitosti-byty-domy/'
 
         input_data['url'] = input_data['uri'].apply(lambda x: url_base + x)
 
         return input_data
 
-    def make_list_with_used_ids(self, file_used_ids):
+    def make_list_with_used_ids(self, file_used_ids: str) -> None:
         df = pd.read_excel(file_used_ids)
         self._used_ids.extend(df['id'].tolist())
 
-    def scrape_details(self, input_data, proxies):
+    def scrape_details(self, input_data: pd.DataFrame, proxies: list) -> (pd.DataFrame, list):
         logging.info('Scraping started')
         print(f'[{datetime.datetime.now()}] Scraping started')
 
@@ -152,13 +152,13 @@ class WebScraper:
         return scraped_data
 
     @staticmethod
-    def get_proxy_list(proxies_file):
+    def get_proxy_list(proxies_file: str) -> list:
         proxies = pd.read_table(proxies_file, delim_whitespace=True, header=None)[0].values.tolist()
 
         return proxies
 
     @staticmethod
-    def set_browser(proxy_input):
+    def set_browser(proxy_input: str = None) -> webdriver:
         capabilities = webdriver.DesiredCapabilities.CHROME
 
         # Set up proxy
@@ -182,7 +182,7 @@ class WebScraper:
 
         return driver
 
-    def run_scraper(self):
+    def run_scraper(self) -> None:
         # Load input data
         try:
             input_data = pd.read_excel(self.input_file)
