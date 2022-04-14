@@ -1,8 +1,13 @@
 import pandas as pd
+import random
+import datetime
 
 from selenium import webdriver
 from selenium.webdriver import Proxy
+from selenium.webdriver.common.by import By
 from selenium.webdriver.common.proxy import ProxyType
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 
 class WebScraper:
@@ -26,6 +31,112 @@ class WebScraper:
         df = pd.read_excel(file_used_ids)
         self._used_ids.extend(df['id'].tolist())
 
+    def scrape_details(self, input_data, proxies):
+        print(f'[{datetime.datetime.now()}] Scraping started')
+
+        if proxies is None:
+            proxies = []
+
+        scraped_data = []  # List with final data
+        bad_proxies = set()  # List with not working proxies
+
+        # Iterating through data
+        for i, row in input_data.iterrows():
+
+            listing_id = row['id']  # ID of listing
+            url = row['url']  # URL of listing
+
+            if listing_id in self._used_ids:
+                continue
+
+            parameters = {'id': listing_id, 'url': url}
+
+            # Pick random proxy
+            proxy = random.choice(proxies) if proxies else None
+
+            browser = self.set_browser(proxy)
+
+            is_browser_working = False
+
+            while not is_browser_working:
+                try:
+                    browser.get(url)
+                    is_browser_working = True
+                except:
+                    bad_proxies.add(proxy)
+
+                    browser.close()
+                    proxy = random.choice(proxies) if proxies else None
+
+                    while proxy in bad_proxies:
+                        proxy = random.choice(proxies) if proxies else None
+
+                    browser = self.set_browser(proxy)
+
+            # Handle popup window
+            try:
+                WebDriverWait(browser, 5).until(EC.element_to_be_clickable((By.XPATH, "//button[@id='CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll']"))).click()
+            except:
+                pass
+
+            #### SCRAPING PARAMETERS SECTION ####
+            try:
+                parameters_area = browser.find_element(By.XPATH, '//div[@id="detail-parameters"]')
+                params = parameters_area.find_elements(By.XPATH, './/div[@class="row param"]')
+
+                for param in params:
+                    try:
+                        title = param.find_element(By.XPATH, './*[1]').text.strip().replace('\n', '')   # Parameter's title
+                        value = param.find_element(By.XPATH, './*[2]').text.strip().replace('\n', '')   # Parameter's value
+
+                        # Drop irrelevant parameters
+                        if title not in ['Investiční rádce', 'Energie', 'Internet']:
+                            parameters.update({title: value})    # Add title:value to listing details
+                    except:
+                        continue
+            except Exception as e:
+                print(f'[{datetime.datetime.now()}] Error while scraping details on page {i} ({listing_id}) - {e}')
+                continue
+            #### END OF SCRAPING PARAMETERS SECTION ####
+
+            #### SCRAPING NEIGHBORHODD INFO SECTION ####
+            try:
+                neighborhood_area = browser.find_element(By.XPATH, '//div[@id="detail-pois"]')
+                neighborhood_params = neighborhood_area.find_elements(By.XPATH, './/div[@class="poi-item__content"]')
+
+                for param in neighborhood_params:
+                    try:
+                        title = param.find_element(By.XPATH, './/span[@class="poi-item__name--type"]').text.replace(':', '')     # Parameter's title
+                        value = param.find_element(By.XPATH, './/div[@class="poi-item__walking" or @class="poi-item__driving"]/strong').text     # Parameter's value
+
+                        parameters.update({title: value})   # Add title:value to listing details
+                    except:
+                        continue
+            except:
+                print(f'[{datetime.datetime.now()}] Error while scraping area info on page {i} ({listing_id})')
+                continue
+            #### END OF SCRAPING NEIGHBORHODD INFO SECTION ####
+
+            # Add listing with details to scraped data
+            scraped_data.append(parameters)
+
+            # Add ID of scraped listing to used IDs
+            self._used_ids.append(listing_id)
+
+            print(f'[{datetime.datetime.now()}] Page {i} (ID: {listing_id}) scraped')
+
+            browser.close()
+
+        print(f'[{datetime.datetime.now()}] Scraping is done: {len(scraped_data)} listings were exported')
+
+        # Converting to DataFrame
+        try:
+            scraped_data = pd.DataFrame(scraped_data)
+            scraped_data = input_data.merge(scraped_data, on='id')
+        except Exception as e:
+            print(f'[{datetime.datetime.now()}] Error while converting scraped data to DataFrame: {e}')
+
+        return scraped_data
 
     @staticmethod
     def get_proxy_list(proxies_file):
@@ -58,5 +169,4 @@ class WebScraper:
         driver = webdriver.Chrome(desired_capabilities=capabilities, options=options)
 
         return driver
-
 
