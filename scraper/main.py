@@ -4,7 +4,7 @@ import datetime
 if __name__ == '__main__':
     print('STARTED ON:', datetime.datetime.now())
 
-    webscraper = WebScraper(file_input='input.xlsx', file_used_ids='used_ids.xlsx', file_proxies='proxies.txt')
+    webscraper = WebScraper(file_input='../data/input.xlsx', file_used_ids='../data/used_ids.xlsx', file_proxies='../data/proxies.txt')
 
     webscraper.run_scraper()
 

@@ -287,8 +287,8 @@ class WebScraper:
         # Exporting data
         try:
             used_ids_df = pd.DataFrame(self._used_ids, columns=['id'])
-            used_ids_df.to_excel(f'used_ids_{dt_string}.xlsx')
-            scraped_data.to_excel(f'scraped_data_{dt_string}.xlsx')
+            used_ids_df.to_excel(f'data/used_ids_{dt_string}.xlsx')
+            scraped_data.to_excel(f'data/scraped_data_{dt_string}.xlsx')
         except Exception as e:
             logging.error(f'Error while exporting data: {e}')
             print(f'[{datetime.datetime.now()}] Error while scraping data: {e}')
