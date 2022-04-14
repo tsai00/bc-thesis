@@ -1,5 +1,6 @@
 import pandas as pd
 import random
+import logging
 import datetime
 
 from selenium import webdriver
@@ -10,8 +11,14 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-class WebScraper:
+# Configuring file for logs
+logging.basicConfig(filename='web_scraper.log',
+                    format='%(asctime)s - %(levelname)s - %(message)s',
+                    level=logging.INFO,
+                    datefmt='%d.%m.%Y %H:%M:%S')
 
+
+class WebScraper:
     def __init__(self, file_input, file_used_ids, file_proxies):
         self.input_file = file_input
         self.file_used_ids = file_used_ids
@@ -32,6 +39,7 @@ class WebScraper:
         self._used_ids.extend(df['id'].tolist())
 
     def scrape_details(self, input_data, proxies):
+        logging.info('Scraping started')
         print(f'[{datetime.datetime.now()}] Scraping started')
 
         if proxies is None:
@@ -95,6 +103,7 @@ class WebScraper:
                     except:
                         continue
             except Exception as e:
+                logging.error(f'Error while scraping details on page {i} ({listing_id})')
                 print(f'[{datetime.datetime.now()}] Error while scraping details on page {i} ({listing_id}) - {e}')
                 continue
             #### END OF SCRAPING PARAMETERS SECTION ####
@@ -113,6 +122,7 @@ class WebScraper:
                     except:
                         continue
             except:
+                logging.error(f'Error while scraping area info on page {i} ({listing_id})')
                 print(f'[{datetime.datetime.now()}] Error while scraping area info on page {i} ({listing_id})')
                 continue
             #### END OF SCRAPING NEIGHBORHODD INFO SECTION ####
@@ -123,10 +133,12 @@ class WebScraper:
             # Add ID of scraped listing to used IDs
             self._used_ids.append(listing_id)
 
+            logging.info(f'Page {i} (ID: {listing_id}) scraped')
             print(f'[{datetime.datetime.now()}] Page {i} (ID: {listing_id}) scraped')
 
             browser.close()
 
+        logging.info(f'Scraping is done: {len(scraped_data)} listings were exported')
         print(f'[{datetime.datetime.now()}] Scraping is done: {len(scraped_data)} listings were exported')
 
         # Converting to DataFrame
@@ -134,6 +146,7 @@ class WebScraper:
             scraped_data = pd.DataFrame(scraped_data)
             scraped_data = input_data.merge(scraped_data, on='id')
         except Exception as e:
+            logging.error(f'Error while converting scraped data to DataFrame: {e}')
             print(f'[{datetime.datetime.now()}] Error while converting scraped data to DataFrame: {e}')
 
         return scraped_data
@@ -146,7 +159,6 @@ class WebScraper:
 
     @staticmethod
     def set_browser(proxy_input):
-
         capabilities = webdriver.DesiredCapabilities.CHROME
 
         # Set up proxy
@@ -176,12 +188,15 @@ class WebScraper:
             input_data = pd.read_excel(self.input_file)
             data = self.add_column_with_links(input_data)
         except FileNotFoundError:
+            logging.error(f'Error while loading input data: file {self.input_file} does not exist')
             print(f'[{datetime.datetime.now()}] Error while loading input data: file {self.input_file} does not exist')
             return
         except KeyError:
+            logging.error(f'Error while loading input data: could not find column "uri" in file {self.file_used_ids}')
             print(f'[{datetime.datetime.now()}] Error while loading input data: could not find column "uri" in file {self.file_used_ids}')
             return
         except Exception as e:
+            logging.error(f'Error while loading input data: {e}')
             print(f'[{datetime.datetime.now()}] Error while loading input data: {e}')
             return
 
@@ -190,12 +205,15 @@ class WebScraper:
             try:
                 self.make_list_with_used_ids(self.file_used_ids)
             except FileNotFoundError:
+                logging.error(f'Error while loading used IDs: file {self.file_used_ids} does not exist')
                 print(
                     f'[{datetime.datetime.now()}] Error while loading used IDs: file {self.file_used_ids} does not exist')
             except KeyError:
+                logging.error(f'Error while loading used IDs: could not find column "id" in file {self.file_used_ids}')
                 print(
                     f'[{datetime.datetime.now()}] Error while loading used IDs: could not find column "id" in file {self.file_used_ids}')
             except Exception as e:
+                logging.error(f'Error while loading used IDs: {e}')
                 print(f'[{datetime.datetime.now()}] Error while loading used IDs: {e}')
 
         # Load proxies
@@ -203,10 +221,12 @@ class WebScraper:
             try:
                 proxies = self.get_proxy_list(self.file_proxies)
             except KeyError:
+                logging.error(f'Error while loading proxies: file {self.file_proxies} does not exist')
                 print(
                     f'[{datetime.datetime.now()}] Error while loading proxies: file {self.file_proxies} does not exist')
                 proxies = []
             except Exception as e:
+                logging.error(f'Error while loading proxies: {e}')
                 print(f'[{datetime.datetime.now()}] Error while loading proxies: {e}')
                 proxies = []
         else:
@@ -225,4 +245,5 @@ class WebScraper:
             used_ids_df.to_excel(f'used_ids_{dt_string}.xlsx')
             scraped_data.to_excel(f'scraped_data_{dt_string}.xlsx')
         except Exception as e:
+            logging.error(f'Error while exporting data: {e}')
             print(f'[{datetime.datetime.now()}] Error while scraping data: {e}')
