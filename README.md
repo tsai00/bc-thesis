@@ -1,1 +1,1 @@
-# Using Data Mining to Analyse Czech Real Estate Market
+# Use of Data Mining for Analysis of the Czech Real Estate Market
